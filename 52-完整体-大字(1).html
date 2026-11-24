@@ -6057,7 +6057,6 @@
 
         <div id="xy-tree-feed" class="xy-page-body">
           <div class="xy-toolbar">
-            <select id="xy-filter-scene" aria-label="场景筛选"><option value="">全部场景</option></select>
             <select id="xy-sort" aria-label="排序">
               <option value="latest">最新公开</option>
               <option value="oldest">最早公开</option>
@@ -6082,14 +6081,9 @@
               <textarea id="xy-tree-content" maxlength="500" rows="6" placeholder="不用组织好语言。写你此刻最想放下的那一句。"></textarea>
             </label>
 
-            <div class="xy-form-row">
-              <label>场景标签
-                <select id="xy-scene"></select>
-              </label>
-              <label>校区 / 地点
-                <select id="xy-location"></select>
-              </label>
-            </div>
+            <label>校区 / 地点
+              <select id="xy-location"></select>
+            </label>
 
             <div>
               <label>发布方式</label>
@@ -6099,7 +6093,15 @@
               </div>
             </div>
 
-            <label id="xy-capsule" class="hidden">定时公开（可选，仅公开模式）
+            <div id="xy-timing" class="hidden">
+              <label>发布时间</label>
+              <div class="xy-seg" id="xy-timing-seg">
+                <button type="button" data-timing="now" class="on">即时发布</button>
+                <button type="button" data-timing="scheduled">预计时间发布</button>
+              </div>
+            </div>
+
+            <label id="xy-schedule-at" class="hidden">选择公开时间
               <input id="xy-publish-at" type="datetime-local" />
             </label>
 
@@ -6179,9 +6181,8 @@
           </div>
           <div class="xy-stats-grid">
             <div class="xy-panel"><h3>情绪分布</h3><div id="xy-dist"></div></div>
-            <div class="xy-panel"><h3>高频场景</h3><div id="xy-tags" class="xy-chips"></div></div>
-            <div class="xy-panel xy-week"><h3>本周趋势</h3><div id="xy-week" class="xy-week-chart"></div></div>
             <div class="xy-panel"><h3>私密自检卡片</h3><div id="xy-selfcheck"></div></div>
+            <div class="xy-panel xy-week"><h3>本周趋势</h3><div id="xy-week" class="xy-week-chart"></div></div>
           </div>
           <p class="xy-disclaimer">这不是心理诊断。这里只呈现你自己留下的记录，以及公开池的聚合数据。私密树洞不会进入任何公开统计。</p>
         </div>
@@ -6239,7 +6240,6 @@
       treeFeed: $("#xy-tree-feed", doc),
       treeMine: $("#xy-tree-mine", doc),
       treeWrite: $("#xy-tree-write", doc),
-      filterScene: $("#xy-filter-scene", doc),
       sort: $("#xy-sort", doc),
       feedRefresh: $("#xy-feed-refresh", doc),
       feedList: $("#xy-feed-list", doc),
@@ -6249,10 +6249,11 @@
       treeForm: $("#xy-tree-form", doc),
       treeContent: $("#xy-tree-content", doc),
       treeCount: $("#xy-tree-count", doc),
-      scene: $("#xy-scene", doc),
       location: $("#xy-location", doc),
       visibility: $("#xy-visibility", doc),
-      capsule: $("#xy-capsule", doc),
+      timing: $("#xy-timing", doc),
+      timingSeg: $("#xy-timing-seg", doc),
+      scheduleAt: $("#xy-schedule-at", doc),
       publishAt: $("#xy-publish-at", doc),
       modeNote: $("#xy-mode-note", doc),
       treeSubmit: $("#xy-tree-submit", doc),
@@ -6279,7 +6280,6 @@
       statArousal: $("#xy-stat-arousal", doc),
       statDominant: $("#xy-stat-dominant", doc),
       dist: $("#xy-dist", doc),
-      tags: $("#xy-tags", doc),
       week: $("#xy-week", doc),
       selfcheck: $("#xy-selfcheck", doc),
       modal: $("#xy-modal", doc),
@@ -6295,6 +6295,7 @@
       meta: null,
       anonymousId: "",
       isPublic: false,
+      timing: "now",
       feed: { items: [], page: 0, hasMore: false, loading: false },
       mine: [],
       inbox: [],
@@ -6441,19 +6442,10 @@
     /* ---------------- 元信息 ---------------- */
     function fillOptions() {
       const meta = state.meta || FALLBACK_META;
-      const scenes = meta.sceneTags?.length ? meta.sceneTags : FALLBACK_META.sceneTags;
       const locations = meta.campusLocations?.length
         ? meta.campusLocations
         : FALLBACK_META.campusLocations;
 
-      els.scene.innerHTML = scenes
-        .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
-        .join("");
-      els.scene.value = "other";
-
-      els.filterScene.innerHTML =
-        '<option value="">全部场景</option>' +
-        scenes.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join("");
       els.location.innerHTML = locations
         .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
         .join("");
@@ -6527,7 +6519,6 @@
         : "";
       return `<article class="xy-tree-card${mini ? " mini" : ""}" data-tree-id="${escapeHtml(item.id)}">
         <div class="xy-tree-meta">
-          <span class="xy-tag">${escapeHtml(item.sceneTagLabel || "其他")}</span>
           ${mine ? `<span>${escapeHtml(visibilityLabel(item))}</span>` : ""}
           <span class="xy-time">${escapeHtml(fmtTime(item.publishAt || item.createdAt))}</span>
         </div>
@@ -6563,7 +6554,6 @@
         limit: "12",
         sort: els.sort.value || "latest",
       });
-      if (els.filterScene.value) params.set("sceneTag", els.filterScene.value);
 
       try {
         const payload = await api(`/api/treeholes?${params.toString()}`);
@@ -6672,19 +6662,38 @@
       $$("[data-public]", els.visibility).forEach((button) => {
         button.classList.toggle("on", String(button.dataset.public) === String(state.isPublic));
       });
-      els.capsule.classList.toggle("hidden", !state.isPublic);
-      els.treeSubmit.textContent = state.isPublic ? "放进天空" : "收好这句话";
+      if (!state.isPublic) state.timing = "now";
+      els.timing.classList.toggle("hidden", !state.isPublic);
+      updateTimingUI();
       els.modeNote.textContent = state.isPublic
-        ? "公开内容会进入时序流，只有「我也有同感」一个轻互动；没有评论区，也没有热度榜。"
+        ? "即时发布后会直接回到天空；预计时间发布会在到点后才出现在天空。"
         : "私密内容只有你和 AI 看见，不会进入公开池、星空或统计。";
-      if (!state.isPublic) els.publishAt.value = "";
+    }
+
+    function updateTimingUI() {
+      $$("[data-timing]", els.timingSeg).forEach((button) => {
+        button.classList.toggle("on", button.dataset.timing === state.timing);
+      });
+      const scheduled = state.isPublic && state.timing === "scheduled";
+      els.scheduleAt.classList.toggle("hidden", !scheduled);
+      if (!scheduled) els.publishAt.value = "";
+      els.treeSubmit.textContent = !state.isPublic
+        ? "收好这句话"
+        : state.timing === "scheduled"
+          ? "定时放进天空"
+          : "放进天空";
+    }
+
+    function setTiming(timing) {
+      state.timing = timing === "scheduled" ? "scheduled" : "now";
+      updateTimingUI();
     }
 
     function resetTreeForm() {
       els.treeContent.value = "";
       els.publishAt.value = "";
-      els.scene.value = "other";
       els.location.value = "unspecified";
+      state.timing = "now";
       setVisibility(false);
       updateTreeCount();
     }
@@ -6703,19 +6712,22 @@
       const payload = {
         content,
         isPublic: state.isPublic,
-        sceneTag: els.scene.value || "other",
         campusLocation: els.location.value || "unspecified",
       };
 
-      if (state.isPublic && els.publishAt.value) {
+      if (state.isPublic && state.timing === "scheduled") {
+        if (!els.publishAt.value) {
+          toast("请选择预计公开时间。");
+          return;
+        }
         const date = new Date(els.publishAt.value);
         if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now() + 60000) {
-          toast("定时公开需要晚于当前时间至少 1 分钟。");
+          toast("预计公开时间需要晚于当前时间至少 1 分钟。");
           return;
         }
         const twoYears = Date.now() + 2 * 365 * 24 * 60 * 60 * 1000;
         if (date.getTime() > twoYears) {
-          toast("定时公开最多支持两年后。");
+          toast("预计公开时间最多支持两年后。");
           return;
         }
         payload.publishAt = date.toISOString();
@@ -6968,30 +6980,16 @@
       }).join("");
     }
 
-    function renderTags(tags) {
-      if (!tags?.length) {
-        els.tags.innerHTML = '<span class="xy-note">还没有足够的数据。</span>';
-        return;
-      }
-      els.tags.innerHTML = tags.map((tag) =>
-        `<span class="xy-chip">${escapeHtml(tag.label || tag.tag)}<b>${Number(tag.count) || 0}</b></span>`
-      ).join("");
-    }
-
     function renderSelfCheck(selfCheck) {
       if (!selfCheck || !Number(selfCheck.total)) {
         els.selfcheck.innerHTML = '<p class="xy-empty">最近还没有私密记录。写一条只有自己能看见的话，它会在这里留下痕迹。</p>';
         return;
       }
-      const tags = (selfCheck.topTags || []).map((tag) =>
-        `<span class="xy-chip">${escapeHtml(tag.label || tag.tag)}<b>${Number(tag.count) || 0}</b></span>`
-      ).join("");
       const recent = (selfCheck.recent || []).slice(0, 3).map((item) =>
-        `<div><b>${escapeHtml(item.sceneTagLabel || "其他")}</b><span>${escapeHtml(item.emotion || "")} · ${Number(item.intensity) || 0}</span><span>${escapeHtml(fmtTime(item.createdAt))}</span></div>`
+        `<div><b>一条私密记录</b><span>${escapeHtml(fmtTime(item.createdAt))}</span></div>`
       ).join("");
       els.selfcheck.innerHTML = `
-        <div class="xy-self-head">${escapeHtml(selfCheck.summary || "最近留下了一些只有自己能看见的记录。")}</div>
-        <div class="xy-chips" style="margin-top:12px;">${tags}</div>
+        <div class="xy-self-head">最近 ${Number(selfCheck.window?.days) || 30} 天，你留下了 ${Number(selfCheck.total) || 0} 条私密记录。</div>
         <div class="xy-recent">${recent}</div>
         <p class="xy-note" style="margin-top:12px;">${escapeHtml(selfCheck.disclaimer || "这不是心理诊断，只是你自己留下的记录。")}</p>
       `;
@@ -7018,7 +7016,6 @@
         els.statArousal.textContent = String(Math.round((Number(realtime.data.arousal) || 0) * 100));
         els.statDominant.textContent = emotionLabel(realtime.data.dominant || "neutral");
         renderDistribution(daily.data.distribution);
-        renderTags(realtime.data.topTags || daily.data.topTags);
         renderWeek(weekly.data.days);
         renderSelfCheck(selfCheck.data);
         els.liveTotal.textContent = `${Number(realtime.data.total) || 0} 颗星`;
@@ -7153,8 +7150,13 @@
     els.statsRefresh.addEventListener("click", loadStats);
     els.supportOpen.addEventListener("click", showSupportResources);
 
-    [els.filterScene, els.sort].forEach((select) => {
+    [els.sort].forEach((select) => {
       select.addEventListener("change", () => loadFeed(true));
+    });
+
+    els.timingSeg.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-timing]");
+      if (button) setTiming(button.dataset.timing);
     });
 
     els.visibility.addEventListener("click", (event) => {
@@ -7256,7 +7258,6 @@
     renderFeed("正在读取今晚的天空…");
     renderDistribution();
     renderWeek([]);
-    renderTags([]);
     renderSelfCheck(null);
 
     (async () => {
