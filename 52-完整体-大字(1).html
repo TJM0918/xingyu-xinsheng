@@ -6025,7 +6025,6 @@
         </nav>
         <div class="xy-nav-actions">
           <button type="button" id="xy-id-btn" class="xy-quiet"><span class="xy-long">我的匿名 ID</span><span class="xy-short">ID</span></button>
-          <button type="button" id="xy-exit" class="xy-quiet"><span class="xy-long">回到星海</span><span class="xy-short">退出</span></button>
         </div>
       </header>
 
@@ -6059,7 +6058,6 @@
         <div id="xy-tree-feed" class="xy-page-body">
           <div class="xy-toolbar">
             <select id="xy-filter-scene" aria-label="场景筛选"><option value="">全部场景</option></select>
-            <select id="xy-filter-emotion" aria-label="情绪筛选"><option value="">全部情绪</option></select>
             <select id="xy-sort" aria-label="排序">
               <option value="latest">最新公开</option>
               <option value="oldest">最早公开</option>
@@ -6085,20 +6083,6 @@
             </label>
 
             <div class="xy-form-row">
-              <div>
-                <label>此刻的情绪</label>
-                <div class="xy-seg" id="xy-emotion">
-                  <button type="button" data-emotion="negative" class="on">消极</button>
-                  <button type="button" data-emotion="neutral">中性</button>
-                  <button type="button" data-emotion="positive">积极</button>
-                </div>
-              </div>
-              <label>强度 <b id="xy-intensity-value">5</b> / 10
-                <input id="xy-intensity" type="range" min="1" max="10" value="5" />
-              </label>
-            </div>
-
-            <div class="xy-form-row">
               <label>场景标签
                 <select id="xy-scene"></select>
               </label>
@@ -6122,10 +6106,9 @@
             <p class="xy-note" id="xy-mode-note">私密内容只有你和 AI 看见，不会进入公开池、星空或统计。</p>
 
             <div class="xy-form-actions">
-              <button type="button" id="xy-analyze" class="xy-quiet">让系统帮我看看情绪</button>
               <button type="submit" id="xy-tree-submit" class="xy-primary">收好这句话</button>
             </div>
-            <p class="xy-note">这不是心理诊断。你不需要把自己解释得很清楚。</p>
+            <p class="xy-note">系统会在你发送时安静地读一遍，只用来决定它落在星空的哪一段；不会把分析结果展示给你。</p>
           </form>
         </div>
       </section>
@@ -6246,7 +6229,6 @@
       navTabs: $("#xy-nav-tabs", doc),
       unread: $("#xy-unread", doc),
       idBtn: $("#xy-id-btn", doc),
-      exit: $("#xy-exit", doc),
       skyView: $("#xy-view-sky", doc),
       liveTotal: $("#xy-live-total", doc),
       skyFeed: $("#xy-sky-feed", doc),
@@ -6258,7 +6240,6 @@
       treeMine: $("#xy-tree-mine", doc),
       treeWrite: $("#xy-tree-write", doc),
       filterScene: $("#xy-filter-scene", doc),
-      filterEmotion: $("#xy-filter-emotion", doc),
       sort: $("#xy-sort", doc),
       feedRefresh: $("#xy-feed-refresh", doc),
       feedList: $("#xy-feed-list", doc),
@@ -6268,16 +6249,12 @@
       treeForm: $("#xy-tree-form", doc),
       treeContent: $("#xy-tree-content", doc),
       treeCount: $("#xy-tree-count", doc),
-      intensity: $("#xy-intensity", doc),
-      intensityValue: $("#xy-intensity-value", doc),
-      emotion: $("#xy-emotion", doc),
       scene: $("#xy-scene", doc),
       location: $("#xy-location", doc),
       visibility: $("#xy-visibility", doc),
       capsule: $("#xy-capsule", doc),
       publishAt: $("#xy-publish-at", doc),
       modeNote: $("#xy-mode-note", doc),
-      analyze: $("#xy-analyze", doc),
       treeSubmit: $("#xy-tree-submit", doc),
       mailView: $("#xy-view-mailbox", doc),
       mailTabs: $("#xy-mail-tabs", doc),
@@ -6317,7 +6294,6 @@
       mailTab: "inbox",
       meta: null,
       anonymousId: "",
-      emotion: "negative",
       isPublic: false,
       feed: { items: [], page: 0, hasMore: false, loading: false },
       mine: [],
@@ -6327,7 +6303,7 @@
       stats: null,
       statsLoading: false,
       modalOpen: false,
-      busy: { tree: false, mail: false, analyze: false, reply: false },
+      busy: { tree: false, mail: false, reply: false },
       unreadTimer: 0,
     };
 
@@ -6466,7 +6442,6 @@
     function fillOptions() {
       const meta = state.meta || FALLBACK_META;
       const scenes = meta.sceneTags?.length ? meta.sceneTags : FALLBACK_META.sceneTags;
-      const emotions = meta.emotions?.length ? meta.emotions : FALLBACK_META.emotions;
       const locations = meta.campusLocations?.length
         ? meta.campusLocations
         : FALLBACK_META.campusLocations;
@@ -6479,9 +6454,6 @@
       els.filterScene.innerHTML =
         '<option value="">全部场景</option>' +
         scenes.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join("");
-      els.filterEmotion.innerHTML =
-        '<option value="">全部情绪</option>' +
-        emotions.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join("");
       els.location.innerHTML = locations
         .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
         .join("");
@@ -6556,7 +6528,6 @@
       return `<article class="xy-tree-card${mini ? " mini" : ""}" data-tree-id="${escapeHtml(item.id)}">
         <div class="xy-tree-meta">
           <span class="xy-tag">${escapeHtml(item.sceneTagLabel || "其他")}</span>
-          <span class="xy-mood ${escapeHtml(item.emotion)}">${escapeHtml(item.emotionLabel || emotionLabel(item.emotion))} · ${Number(item.intensity) || 0}</span>
           ${mine ? `<span>${escapeHtml(visibilityLabel(item))}</span>` : ""}
           <span class="xy-time">${escapeHtml(fmtTime(item.publishAt || item.createdAt))}</span>
         </div>
@@ -6593,7 +6564,6 @@
         sort: els.sort.value || "latest",
       });
       if (els.filterScene.value) params.set("sceneTag", els.filterScene.value);
-      if (els.filterEmotion.value) params.set("emotion", els.filterEmotion.value);
 
       try {
         const payload = await api(`/api/treeholes?${params.toString()}`);
@@ -6697,13 +6667,6 @@
       els.treeCount.textContent = `${els.treeContent.value.length}/500`;
     }
 
-    function setEmotion(emotion) {
-      state.emotion = emotion;
-      $$("[data-emotion]", els.emotion).forEach((button) => {
-        button.classList.toggle("on", button.dataset.emotion === emotion);
-      });
-    }
-
     function setVisibility(isPublic) {
       state.isPublic = Boolean(isPublic);
       $$("[data-public]", els.visibility).forEach((button) => {
@@ -6719,12 +6682,9 @@
 
     function resetTreeForm() {
       els.treeContent.value = "";
-      els.intensity.value = "5";
-      els.intensityValue.textContent = "5";
       els.publishAt.value = "";
       els.scene.value = "other";
       els.location.value = "unspecified";
-      setEmotion("negative");
       setVisibility(false);
       updateTreeCount();
     }
@@ -6742,8 +6702,6 @@
 
       const payload = {
         content,
-        emotion: state.emotion,
-        intensity: Number(els.intensity.value),
         isPublic: state.isPublic,
         sceneTag: els.scene.value || "other",
         campusLocation: els.location.value || "unspecified",
@@ -6768,6 +6726,24 @@
       els.treeSubmit.textContent = "正在放上去…";
 
       try {
+        // 情绪只用于决定星星落在哪一段，不在界面上展示给用户。
+        let emotion = "neutral";
+        let intensity = 5;
+        try {
+          const analysis = await api("/api/analyze", { method: "POST", body: { text: content } });
+          if (analysis.data?.risk?.level === 2) {
+            showSupport(analysis.data.support);
+            return;
+          }
+          if (analysis.data?.polarity === "positive") emotion = "positive";
+          else if (analysis.data?.polarity === "negative") emotion = "negative";
+          intensity = Math.max(1, Math.min(10, Math.round((Number(analysis.data?.arousal) || 0.3) * 10)));
+        } catch {
+          // 分析失败时使用温和的中性值，不打断发布；树洞接口仍会再次做安全审核。
+        }
+        payload.emotion = emotion;
+        payload.intensity = intensity;
+
         const result = await api("/api/treeholes", { method: "POST", body: payload });
         const item = result.data;
 
@@ -6776,7 +6752,7 @@
           toast("已经升上天空。");
           resetTreeForm();
           await Promise.allSettled([loadFeed(true), loadRealtime()]);
-          switchTreeTab("feed");
+          switchView("sky");
         } else if (item.visibility === "scheduled") {
           toast("已经设好时间。到点后，它会自己出现在天空里。");
           resetTreeForm();
@@ -6795,39 +6771,6 @@
         state.busy.tree = false;
         els.treeSubmit.disabled = false;
         els.treeSubmit.textContent = state.isPublic ? "放进天空" : "收好这句话";
-      }
-    }
-
-    async function analyzeDraft() {
-      const text = els.treeContent.value.trim();
-      if (!text) {
-        toast("先写一点什么，再让系统读。");
-        return;
-      }
-      if (state.busy.analyze) return;
-      state.busy.analyze = true;
-      els.analyze.disabled = true;
-      els.analyze.textContent = "读取中…";
-
-      try {
-        const payload = await api("/api/analyze", { method: "POST", body: { text } });
-        const data = payload.data;
-        const emotion = data.polarity === "positive" ? "positive" : data.polarity === "negative" ? "negative" : "neutral";
-        setEmotion(emotion);
-        const intensity = Math.max(1, Math.min(10, Math.round((Number(data.arousal) || 0.3) * 10)));
-        els.intensity.value = String(intensity);
-        els.intensityValue.textContent = String(intensity);
-        if (data.risk?.level === 2) {
-          showSupport(data.support);
-        } else {
-          toast(`更像是「${data.dominant}」。只是帮你预填，不是诊断。`);
-        }
-      } catch (error) {
-        showError(error);
-      } finally {
-        state.busy.analyze = false;
-        els.analyze.disabled = false;
-        els.analyze.textContent = "让系统帮我看看情绪";
       }
     }
 
@@ -7193,7 +7136,6 @@
     });
 
     els.idBtn.addEventListener("click", showIdentity);
-    els.exit.addEventListener("click", () => backtop.click());
     els.skyMore.addEventListener("click", () => {
       switchView("treehole");
       switchTreeTab("feed");
@@ -7211,17 +7153,8 @@
     els.statsRefresh.addEventListener("click", loadStats);
     els.supportOpen.addEventListener("click", showSupportResources);
 
-    [els.filterScene, els.filterEmotion, els.sort].forEach((select) => {
+    [els.filterScene, els.sort].forEach((select) => {
       select.addEventListener("change", () => loadFeed(true));
-    });
-
-    els.emotion.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-emotion]");
-      if (button) setEmotion(button.dataset.emotion);
-    });
-
-    els.intensity.addEventListener("input", () => {
-      els.intensityValue.textContent = els.intensity.value;
     });
 
     els.visibility.addEventListener("click", (event) => {
@@ -7231,7 +7164,6 @@
 
     els.treeContent.addEventListener("input", updateTreeCount);
     els.treeForm.addEventListener("submit", submitTree);
-    els.analyze.addEventListener("click", analyzeDraft);
 
     els.mailContent.addEventListener("input", () => {
       els.mailCount.textContent = `${els.mailContent.value.length}/300`;
@@ -7311,8 +7243,6 @@
       }
       if (state.view !== "sky") {
         switchView("sky");
-      } else {
-        backtop.click();
       }
     });
 
@@ -7321,7 +7251,6 @@
     win.addEventListener("beforeunload", () => win.clearInterval(state.unreadTimer));
 
     fillOptions();
-    setEmotion("negative");
     setVisibility(false);
     updateTreeCount();
     renderFeed("正在读取今晚的天空…");

@@ -220,17 +220,17 @@ error.details.support.campus
 
 #### T2. 发布树洞
 
-- 字段：`content`、`emotion`、`intensity`、`isPublic`、`sceneTag`、`campusLocation`、`publishAt`。
+- 字段：`content`、`isPublic`、`sceneTag`、`campusLocation`、`publishAt`；`emotion`、`intensity` 由前端在提交时静默调用 `/api/analyze` 得到，不展示给用户。
 - 模式切换：
   - 私密：`isPublic: false`，仅本人可见；
-  - 公开：`isPublic: true`，进入公开池。
+  - 公开：`isPublic: true`，进入公开池，发布成功后回到天空视图。
 - 场景标签从 `GET /api/meta` 的 `sceneTags` 渲染，不要写死。
-- 强度用 1~10 的滑杆或分段选择。
+- 不再让用户选择情绪或强度；分析结果只用于星点位置。
 - 时间胶囊：公开时可选 `publishAt`；私密模式不显示定时入口。
-- 字数：`content` 最大 500 字；当前展示页的 200 字限制只是旧的演示输入框，需要统一到 500。
+- 字数：`content` 最大 500 字，当前页面已统一。
 - **验收**：
   - 私密发布后出现 `comfort.text`，公开列表不出现；
-  - 公开发布后出现在 `/api/treeholes`；
+  - 公开发布后出现在 `/api/treeholes`，并切回天空视图；
   - 定时发布后 `visibility === "scheduled"`，公开列表暂时不出现。
 
 #### T3. 私密安抚与危机支持
@@ -246,7 +246,7 @@ error.details.support.campus
 
 - `GET /api/treeholes?page=1&limit=20&sort=latest`
 - 只展示服务端返回的数据，不在前端做“热度排序”。
-- 每张卡片：内容、场景标签、情绪、时间、共鸣数。
+- 每张卡片：内容、场景标签、时间、共鸣数；不展示个人情绪/强度分析。
 - 不显示发布者匿名 ID。
 - **验收**：没有评论入口；刷新后顺序稳定；分页正常。
 
