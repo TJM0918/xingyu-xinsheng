@@ -6769,7 +6769,7 @@
           toast("已经设好时间。到点后，它会自己出现在天空里。");
           resetTreeForm();
           await Promise.allSettled([loadMine(), loadFeed(true), loadRealtime()]);
-          switchTreeTab("mine");
+          switchView("sky");
         } else {
           resetTreeForm();
           if (item.comfort) showComfort(item.comfort);
