@@ -10,7 +10,8 @@
 
 技术栈：**Node.js 18+ / Express 4 / MongoDB / Mongoose / JavaScript CommonJS**。
 
-> 前端任务拆分与联调清单：[docs/FRONTEND-HANDOFF.md](docs/FRONTEND-HANDOFF.md)
+> 前端任务拆分与联调清单：[docs/FRONTEND-HANDOFF.md](docs/FRONTEND-HANDOFF.md)  
+> 组员第一次使用、日常拉取与提交：[TEAM-GUIDE.md](TEAM-GUIDE.md)
 
 ---
 
