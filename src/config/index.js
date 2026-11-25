@@ -59,7 +59,8 @@ const frontendFile = path.resolve(
 );
 
 const llmBaseUrl = String(process.env.LLM_BASE_URL || "").replace(/\/+$/, "");
-const llmApiKey = String(process.env.LLM_API_KEY || "");
+// API_KEY 是 LLM_API_KEY 的别名：部署平台常只让配一个 API_KEY，二者设一个即可
+const llmApiKey = String(process.env.LLM_API_KEY || process.env.API_KEY || "");
 const llmModel = String(process.env.LLM_MODEL || "");
 const llmEnabled = Boolean(llmBaseUrl && llmApiKey && llmModel);
 

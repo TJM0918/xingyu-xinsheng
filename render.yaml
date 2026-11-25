@@ -1,0 +1,50 @@
+# Render Blueprint —— 星语心声 / IF.Link
+# 用法：Render 控制台 → New → Blueprint → 选 TJM0918/xingyu-xinsheng
+# 这份文件只声明“怎么跑”，不含任何密钥。
+services:
+  - type: web
+    name: xingyu-xinsheng
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Dockerfile 里已经 ENV NODE_ENV=production，这里显式写一遍防止被覆盖
+      - key: NODE_ENV
+        value: production
+
+      # 唯一的必填项：MongoDB Atlas 连接串，创建 Blueprint 时粘贴，不入库
+      - key: MONGODB_URI
+        sync: false
+
+      # 生产环境强校验：必须 ≥32 位且不能是示例值，交给 Render 随机生成
+      - key: AUDIT_HMAC_SECRET
+        generateValue: true
+
+      # Render 在前面有一层反向代理，必须是 1，否则 req.ip 和限流会失真
+      - key: TRUST_PROXY
+        value: "1"
+
+      # 生产走 HTTPS，Cookie 才能带 Secure
+      - key: COOKIE_SECURE
+        value: "true"
+
+      # 前端由本服务同源托管，留空即只允许同源
+      - key: CORS_ORIGINS
+        value: ""
+
+      # ── 可选：外部服务（OpenAI 兼容接口）────────────────────────────
+      # 三项同时存在才会启用；只填 API_KEY 时走本地安全模板，不影响接口可用性。
+      # 值在 Render 控制台粘贴，绝不入库。
+      - key: API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+
+      - key: RATE_LIMIT_ENABLED
+        value: "true"

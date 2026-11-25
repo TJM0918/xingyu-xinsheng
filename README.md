@@ -625,6 +625,8 @@ await fetch("http://localhost:3000/api/treeholes", {
 
 ## 12. 生产部署清单
 
+> 一键跑通：Render + MongoDB Atlas 免费层的分步操作见 [docs/DEPLOY-RENDER.md](docs/DEPLOY-RENDER.md)，仓库根目录的 `render.yaml` 可被 Render Blueprint 直接读取。
+
 - [ ] `NODE_ENV=production`
 - [ ] 强随机 `AUDIT_HMAC_SECRET`（`openssl rand -hex 32`）
 - [ ] HTTPS；生产 Cookie 带 `Secure`（`COOKIE_SECURE` 默认跟随 `NODE_ENV=production`），纯 HTTP 下浏览器不会保存
