@@ -62,8 +62,13 @@ test("命中护栏后重试一次，第二次通过则采用模型文字", async
     assert.equal(stub.calls[0].body.model, "test-model");
     assert.match(
       String(stub.calls[0].body.messages[0].content),
+      /自动生成的陪伴文字/,
+      "system prompt 应该说明这是自动生成的文字"
+    );
+    assert.doesNotMatch(
+      String(stub.calls[0].body.messages[0].content),
       /守夜人/,
-      "system prompt 应该带上角色设定"
+      "system prompt 不应再让模型扮演人格化角色"
     );
   } finally {
     stub.restore();
