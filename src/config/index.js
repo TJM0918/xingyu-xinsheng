@@ -97,7 +97,7 @@ const config = Object.freeze({
     baseUrl: llmBaseUrl,
     apiKey: llmApiKey,
     model: llmModel,
-    timeoutMs: readInt("LLM_TIMEOUT_MS", 6500, { min: 1500, max: 30000 }),
+    timeoutMs: readInt("LLM_TIMEOUT_MS", 12000, { min: 1500, max: 30000 }),
   }),
   support: Object.freeze({
     campusName: process.env.CAMPUS_COUNSELING_NAME || "东南大学心理健康教育中心",

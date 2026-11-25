@@ -75,6 +75,38 @@ test("命中护栏后重试一次，第二次通过则采用模型文字", async
   }
 });
 
+test("兼容数组分段的 content（部分推理模型的返回结构）", async () => {
+  const original = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      choices: [
+        {
+          finish_reason: "stop",
+          message: {
+            content: [
+              { type: "text", text: GOOD },
+            ],
+          },
+        },
+      ],
+    }),
+  });
+  try {
+    const result = await generateComfort({
+      content: "今天很累",
+      emotion: "疲惫",
+      intensity: 6,
+      sceneTag: "other",
+      riskLevel: 0,
+    });
+    assert.equal(result.provider, "llm");
+    assert.equal(result.text, GOOD);
+  } finally {
+    global.fetch = original;
+  }
+});
+
 test("4xx 属于确定性失败，不重试以免双倍消耗配额", async () => {
   const original = global.fetch;
   let calls = 0;

@@ -111,6 +111,21 @@ function isSafeComfort(text) {
   return !matchedBannedPhrase(text);
 }
 
+/** 从响应里取正文：兼容 string、数组分段（部分推理模型）与 legacy text 字段。 */
+function extractText(payload) {
+  const choice = payload?.choices?.[0];
+  const content = choice?.message?.content;
+  if (typeof content === "string") return content.trim();
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (typeof part === "string" ? part : part?.text || ""))
+      .join("")
+      .trim();
+  }
+  if (typeof choice?.text === "string") return choice.text.trim();
+  return "";
+}
+
 async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLevel }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.llm.timeoutMs);
@@ -146,7 +161,8 @@ async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLe
       body: JSON.stringify({
         model: config.llm.model,
         temperature: 0.7,
-        max_tokens: 300,
+        // 推理模型会先消耗大量 token 在思考上，300 会把额度吃光导致正文为空
+        max_tokens: 900,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -163,7 +179,13 @@ async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLe
     }
 
     const payload = await response.json();
-    const text = payload?.choices?.[0]?.message?.content?.trim();
+    const text = extractText(payload);
+    if (!text) {
+      // 不打印模型输出（可能为空），只打印能定位配置问题的元信息
+      console.warn(
+        `[comfort] LLM returned no text (finish_reason=${payload?.choices?.[0]?.finish_reason}, completion_tokens=${payload?.usage?.completion_tokens}, model=${config.llm.model})`
+      );
+    }
     const banned = matchedBannedPhrase(text);
     if (!isSafeComfort(text)) {
       const reason = !text
