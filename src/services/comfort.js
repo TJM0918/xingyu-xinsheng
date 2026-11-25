@@ -156,7 +156,10 @@ async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLe
     });
 
     if (!response.ok) {
-      throw new Error(`LLM HTTP ${response.status}`);
+      const error = new Error(`LLM HTTP ${response.status}`);
+      // 4xx 是确定性失败（key 无效、配额用尽、路径写错），重试只会双倍消耗配额
+      error.retryable = response.status >= 500;
+      throw error;
     }
 
     const payload = await response.json();
@@ -172,7 +175,6 @@ async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLe
             : `banned-phrase:${banned}`;
       throw new Error(`LLM comfort failed safety guard: ${reason}`);
     }
-
     return {
       text,
       provider: "llm",
@@ -200,6 +202,8 @@ async function generateComfort(input) {
       console.warn(
         `[comfort] LLM fallback (attempt ${attempt}/${ATTEMPTS}): ${error.message}`
       );
+      // 确定性失败（4xx）重试也不会变，省下这次配额
+      if (error.retryable === false) break;
     }
   }
 

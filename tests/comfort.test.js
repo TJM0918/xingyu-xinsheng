@@ -75,6 +75,28 @@ test("命中护栏后重试一次，第二次通过则采用模型文字", async
   }
 });
 
+test("4xx 属于确定性失败，不重试以免双倍消耗配额", async () => {
+  const original = global.fetch;
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return { ok: false, status: 429, json: async () => ({}) };
+  };
+  try {
+    const result = await generateComfort({
+      content: "今天很累",
+      emotion: "疲惫",
+      intensity: 6,
+      sceneTag: "other",
+      riskLevel: 0,
+    });
+    assert.equal(calls, 1, "429 不应该重试");
+    assert.equal(result.provider, "local");
+  } finally {
+    global.fetch = original;
+  }
+});
+
 test("两次都命中护栏时回退本地模板", async () => {
   const stub = stubFetch([BANNED, BANNED]);
   try {
