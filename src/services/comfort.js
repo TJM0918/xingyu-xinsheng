@@ -98,9 +98,14 @@ function localComfort({ emotion, intensity, sceneTag, riskLevel }) {
   };
 }
 
+function matchedBannedPhrase(text) {
+  if (!text) return null;
+  return BANNED_COMFORT_PHRASES.find((phrase) => text.includes(phrase)) || null;
+}
+
 function isSafeComfort(text) {
   if (!text || text.length < 20 || text.length > 600) return false;
-  return !BANNED_COMFORT_PHRASES.some((phrase) => text.includes(phrase));
+  return !matchedBannedPhrase(text);
 }
 
 async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLevel }) {
@@ -151,8 +156,16 @@ async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLe
 
     const payload = await response.json();
     const text = payload?.choices?.[0]?.message?.content?.trim();
+    const banned = matchedBannedPhrase(text);
     if (!isSafeComfort(text)) {
-      throw new Error("LLM comfort failed safety guard");
+      const reason = !text
+        ? "empty"
+        : text.length < 20
+          ? `too-short:${text.length}`
+          : text.length > 600
+            ? `too-long:${text.length}`
+            : `banned-phrase:${banned}`;
+      throw new Error(`LLM comfort failed safety guard: ${reason}`);
     }
 
     return {
@@ -168,18 +181,24 @@ async function requestLlmComfort({ content, emotion, intensity, sceneTag, riskLe
 
 /**
  * 生成私密树洞的安抚文字。LLM 不可用、超时或触发安全护栏时，
- * 自动回退到本地模板；调用方不需要处理失败。
+ * 自动重试一次，仍失败再回退到本地模板；调用方不需要处理失败。
  */
 async function generateComfort(input) {
   const fallback = localComfort(input);
   if (!config.llm.enabled) return fallback;
 
-  try {
-    return await requestLlmComfort(input);
-  } catch (error) {
-    console.warn("[comfort] LLM fallback:", error.message);
-    return fallback;
+  const ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    try {
+      return await requestLlmComfort(input);
+    } catch (error) {
+      console.warn(
+        `[comfort] LLM fallback (attempt ${attempt}/${ATTEMPTS}): ${error.message}`
+      );
+    }
   }
+
+  return fallback;
 }
 
 module.exports = { generateComfort, localComfort, isSafeComfort };
