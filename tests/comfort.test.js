@@ -12,9 +12,9 @@ process.env.LLM_TIMEOUT_MS = "5000";
 const { generateComfort, isSafeComfort } = require("../src/services/comfort");
 
 const GOOD =
-  "我听见了。你现在这种提不起力气的感觉，不代表你变差了。今晚你不用证明什么，也不用马上好起来。";
+  "我听见了。其实你现在这种提不起力气的感觉，不代表你变差了。至少今晚你不用证明什么，也不用马上好起来。";
 const BANNED =
-  "我听见了。其实你不需要这么快好起来，至少今晚可以先休息一下，慢慢来，明天再说。";
+  "你应该早点睡，想开点就好了，别想太多，明天会好起来的，振作一点。";
 
 function stubFetch(contents) {
   const original = global.fetch;
@@ -35,6 +35,15 @@ test("护栏识别：命中禁用词表即不安全", () => {
   assert.equal(isSafeComfort(BANNED), false);
   assert.equal(isSafeComfort("太短"), false);
   assert.equal(isSafeComfort(""), false);
+});
+
+test("“其实”“至少”已按产品决定移出词表，不再拦截", () => {
+  assert.equal(
+    isSafeComfort(
+      "我听见了。其实有些难受说不上原因，至少今晚可以先把它放在这里，不用马上好起来。"
+    ),
+    true
+  );
 });
 
 test("命中护栏后重试一次，第二次通过则采用模型文字", async () => {

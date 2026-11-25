@@ -3,12 +3,13 @@
 const config = require("../config");
 const { sceneTagLabel } = require("../constants");
 
+// 说明：2026-11-25 移除了“其实”“至少”两个词。
+// 它们是中文高频连接词，模型几乎必用，误伤率远高于实际风险；
+// “至少”的消解式意味（如“至少你还有…”）由 prompt 约束，不靠词表兜底。
 const BANNED_COMFORT_PHRASES = [
   "你应该",
   "建议你",
   "想开点",
-  "至少",
-  "其实",
   "加油",
   "振作",
   "别想太多",
